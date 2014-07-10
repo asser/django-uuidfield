@@ -37,11 +37,6 @@ class StringUUID(uuid.UUID):
     def __hash__(self):
         return self.__unicode__().__hash__()
    
-    def __cmp__(self, other):
-        # since foreign keys are stored as the hex representation, we
-        # want to ensure that comparisions are strings without the '-'s
-        return self.__unicode__().__cmp__(unicode(other).replace('-', ''))
-   
     def __eq__(self, other):
         return self.__unicode__().__eq__(unicode(other).replace('-', ''))
 
