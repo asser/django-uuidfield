@@ -1,10 +1,13 @@
 import uuid
 
-from django.db import connection, IntegrityError
+from django.db import IntegrityError
 from django.test import TestCase
 
-from uuidfield.tests.models import (AutoUUIDField, ManualUUIDField,
-    NamespaceUUIDField, BrokenNamespaceUUIDField, HyphenatedUUIDField)
+from uuidfield.tests.models import (
+    AutoUUIDField, ManualUUIDField,
+    NamespaceUUIDField, BrokenNamespaceUUIDField, HyphenatedUUIDField,
+    ParentUUIDField, ChildUUIDField
+)
 
 
 class UUIDFieldTestCase(TestCase):
@@ -12,7 +15,6 @@ class UUIDFieldTestCase(TestCase):
     def test_auto_uuid4(self):
         obj = AutoUUIDField.objects.create()
         self.assertTrue(obj.uuid)
-        self.assertEquals(len(obj.uuid), 32)
         self.assertTrue(isinstance(obj.uuid, uuid.UUID))
         self.assertEquals(obj.uuid.version, 4)
 
@@ -22,14 +24,12 @@ class UUIDFieldTestCase(TestCase):
     def test_manual(self):
         obj = ManualUUIDField.objects.create(uuid=uuid.uuid4())
         self.assertTrue(obj)
-        self.assertEquals(len(obj.uuid), 32)
         self.assertTrue(isinstance(obj.uuid, uuid.UUID))
         self.assertEquals(obj.uuid.version, 4)
 
     def test_namespace(self):
         obj = NamespaceUUIDField.objects.create()
         self.assertTrue(obj)
-        self.assertEquals(len(obj.uuid), 32)
         self.assertTrue(isinstance(obj.uuid, uuid.UUID))
         self.assertEquals(obj.uuid.version, 5)
 
@@ -42,8 +42,6 @@ class UUIDFieldTestCase(TestCase):
 
         self.assertTrue('-' in unicode(uuid))
         self.assertTrue('-' in str(uuid))
-
-        self.assertEquals(len(uuid), 36)
 
         # ensure the hyphens don't affect re-saving object
         obj.name = 'shoe'
@@ -63,3 +61,15 @@ class UUIDFieldTestCase(TestCase):
         filtered_obj = AutoUUIDField.objects.filter(uuid=obj_uuid)[0]
         self.assertEqual(inserted_obj.uuid, obj_uuid)
         self.assertEqual(filtered_obj.uuid, obj_uuid)
+
+    def test_prefetch_related(self):
+        obj = ParentUUIDField.objects.create(name='Test Parent 1')
+        rel1 = ChildUUIDField.objects.create(name='Test Child 1', parent=obj)
+        rel2 = ChildUUIDField.objects.create(name='Test Child 2', parent=obj)
+
+        qs = ParentUUIDField.objects.prefetch_related('childuuidfield_set')
+        parent = qs[0]
+
+        with self.assertNumQueries(0):
+            self.assertTrue(rel1 in list(parent.childuuidfield_set.all()))
+            self.assertTrue(rel2 in list(parent.childuuidfield_set.all()))

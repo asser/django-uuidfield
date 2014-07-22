@@ -22,3 +22,14 @@ class NamespaceUUIDField(models.Model):
 
 class BrokenNamespaceUUIDField(models.Model):
     uuid = UUIDField(auto=True, namespace='lala', version=5)
+
+
+class ParentUUIDField(models.Model):
+    uuid = UUIDField(auto=True, primary_key=True)
+    name = models.CharField(max_length=16)
+
+
+class ChildUUIDField(models.Model):
+    uuid = UUIDField(auto=True, primary_key=True)
+    name = models.CharField(max_length=16)
+    parent = models.ForeignKey('ParentUUIDField')

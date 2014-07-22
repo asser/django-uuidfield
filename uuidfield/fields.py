@@ -15,32 +15,6 @@ except (ImportError, AttributeError):
     pass
 
 
-class StringUUID(uuid.UUID):
-    def __init__(self, *args, **kwargs):
-        # get around UUID's immutable setter
-        object.__setattr__(self, 'hyphenate', kwargs.pop('hyphenate', False))
-
-        super(StringUUID, self).__init__(*args, **kwargs)
-
-    def __unicode__(self):
-        return unicode(str(self))
-
-    def __str__(self):
-        if self.hyphenate:
-            return super(StringUUID, self).__str__()
-
-        return self.hex
-
-    def __len__(self):
-        return len(self.__unicode__())
-
-    def __hash__(self):
-        return self.__unicode__().__hash__()
-   
-    def __eq__(self, other):
-        return self.__unicode__().__eq__(unicode(other).replace('-', ''))
-
-
 class UUIDField(Field):
     """
     A field which stores a UUID value in hex format. This may also have
@@ -52,7 +26,7 @@ class UUIDField(Field):
     __metaclass__ = SubfieldBase
 
     def __init__(self, version=4, node=None, clock_seq=None,
-            namespace=None, name=None, auto=False, hyphenate=False, *args, **kwargs):
+                 namespace=None, name=None, auto=False, hyphenate=False, *args, **kwargs):
         assert version in (1, 3, 4, 5), "UUID version %s is not supported." % version
         self.auto = auto
         self.version = version
@@ -132,16 +106,14 @@ class UUIDField(Field):
 
     def to_python(self, value):
         """
-        Returns a ``StringUUID`` instance from the value returned by the
-        database. This doesn't use uuid.UUID directly for backwards
-        compatibility, as ``StringUUID`` implements ``__unicode__`` with
-        ``uuid.UUID.hex()``.
+        Returns a ``UUID`` instance from the value returned by the
+        database.
         """
         if not value:
             return None
         # attempt to parse a UUID including cases in which value is a UUID
         # instance already to be able to get our StringUUID in.
-        return StringUUID(smart_unicode(value), hyphenate=self.hyphenate)
+        return uuid.UUID(smart_unicode(value))
 
     def formfield(self, **kwargs):
         defaults = {
